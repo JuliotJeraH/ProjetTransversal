@@ -1,7 +1,7 @@
 <?php 
 session_start();
 include "DB_Connexion.php";
-if(!isset($_SESSION['username'])){
+if(!isset($_SESSION['matricule'])) {
     header("Location: login.php");
     exit();
 }

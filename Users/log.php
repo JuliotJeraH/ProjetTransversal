@@ -17,6 +17,7 @@
         <button type="submit">Login</button>
 
         <p>Don't have an account? <a href="Signin.php">Sign In</a></p>
+
     </form>
 </body>
 </html>
@@ -34,7 +35,7 @@ $sql->execute();
 $sql->bind_result($id);
 
 if($sql->fetch()){
-
+    $_SESSION["matricule"]=$matricule;
     header("Location: Menu.php");
 } else {
     echo "Identifiants incorrects. Veuillez réessayer.";
