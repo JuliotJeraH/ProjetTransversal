@@ -36,6 +36,7 @@ $sql->bind_result($id);
 
 if($sql->fetch()){
     $_SESSION["matricule"]=$matricule;
+    $_SESSION["username"]=$username;
     header("Location: Menu.php");
 } else {
     echo "Identifiants incorrects. Veuillez réessayer.";
