@@ -26,6 +26,14 @@ $candidates = [];
 while ($row = $result->fetch_assoc()) {
     $candidates[] = $row;
 }
+
+// Vérifie si l'utilisateur a déjà voté
+$matricule = $_SESSION['matricule'];
+$hasVotedQuery = $conn->prepare("SELECT has_voted FROM users WHERE matricule = ?");
+$hasVotedQuery->bind_param("s", $matricule);
+$hasVotedQuery->execute();
+$hasVotedResult = $hasVotedQuery->get_result();
+$hasVoted = $hasVotedResult->fetch_assoc()['has_voted'];
 ?>
 
 <!DOCTYPE html>
@@ -52,21 +60,27 @@ while ($row = $result->fetch_assoc()) {
                         <td><?php echo htmlspecialchars($candidate['name']); ?></td>
                         <td><?php echo htmlspecialchars($candidate['vision']); ?></td>
                         <td>
-                            <form action="voter.php" method="POST" style="display:inline;">
-                                <input type="hidden" name="candidat_id" value="<?php echo $candidate['id']; ?>">
-                                <input type="hidden" name="election_id" value="<?php echo $election_id; ?>">
-                                <button type="submit">Voter</button>
-                            </form>
+                            <?php if (!$hasVoted): ?>
+                                <form action="trait_voter.php" method="POST" style="display:inline;">
+                                    <input type="hidden" name="candidat_id" value="<?php echo $candidate['id']; ?>">
+                                    <input type="hidden" name="election_id" value="<?php echo $election_id; ?>">
+                                    <button type="submit">Voter</button>
+                                </form>
+                            <?php else: ?>
+                                <button type="button" disabled>Vote enregistré</button>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
         <br>
-        <form action="modifier_vote.php" method="POST">
-            <input type="hidden" name="election_id" value="<?php echo $election_id; ?>">
-            <button type="submit">Modifier le vote</button>
-        </form>
+        <?php if ($hasVoted): ?>
+            <form action="trait_modifvote.php" method="POST">
+                <input type="hidden" name="election_id" value="<?php echo $election_id; ?>">
+                <button type="submit">Modifier le vote</button>
+            </form>
+        <?php endif; ?>
     <?php else: ?>
         <p>Aucune candidate trouvée pour cette élection.</p>
     <?php endif; ?>
