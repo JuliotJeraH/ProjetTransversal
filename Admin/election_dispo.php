@@ -23,7 +23,7 @@ $result = $conn->query($sql);
 
     <?php if ($result && $result->num_rows > 0): ?>
         <?php while ($row = $result->fetch_assoc()): ?>
-            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
+            <div>
                 <h2><?= htmlspecialchars($row['title']) ?></h2>
                 <p><strong>Description :</strong> <?= nl2br(htmlspecialchars($row['description'])) ?></p>
                 <p><strong>Date de début :</strong> <?= htmlspecialchars($row['start_date']) ?></p>
@@ -33,22 +33,16 @@ $result = $conn->query($sql);
                 // Vérifier si l'élection est terminée
                 $current_date = date('Y-m-d');
                 if ($current_date > $row['end_date']): ?>
-                    <p style="color: red; font-weight: bold;">Élection terminée</p>
+                    <p>Élection terminée</p>
                     <p>
-                        <a href="resultats_election.php?election_id=<?= $row['id'] ?>" style="background-color: #FFC107; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
-                            Consulter le résultat
-                        </a>
+                        <a href="resultats_election.php?election_id=<?= $row['id'] ?>">Consulter le résultat</a>
                     </p>
                 <?php else: ?>
                     <p>
-                        <a href="gestion_candidats.php?election_id=<?= $row['id'] ?>" style="background-color: #007BFF; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
-                            Gérer les candidats
-                        </a>
+                        <a href="gestion_candidats.php?election_id=<?= $row['id'] ?>">Gérer les candidats</a>
                     </p>
                     <p>
-                        <a href="gestion_election.php?election_id=<?= $row['id'] ?>" style="background-color: #28A745; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
-                            Gérer l'élection
-                        </a>
+                        <a href="gestion_election.php?election_id=<?= $row['id'] ?>">Gérer l'élection</a>
                     </p>
                 <?php endif; ?>
             </div>
