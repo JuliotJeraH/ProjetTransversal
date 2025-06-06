@@ -1,62 +1,62 @@
-<?php 
+<?php
 session_start();
 include "DB_Connexion.php";
 
-// Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['matricule'])) {
-    header("Location: log.php");
+// Vérifier connexion admin (exemple basique)
+if (!isset($_SESSION['username'])) {
+    header("Location: Admin_log.php");
     exit();
 }
+
+$sql = "SELECT id, title, description, start_date, end_date FROM elections ORDER BY start_date DESC";
+$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Election disponible</title>
+    <title>Élections disponibles</title>
 </head>
 <body>
+    <h1>Élections disponibles</h1>
 
-<?php 
-try {
-    $sql = $conn->prepare("SELECT id, title FROM elections");
-    $sql->execute();
-    $result = $sql->get_result();
+    <?php if ($result && $result->num_rows > 0): ?>
+        <?php while ($row = $result->fetch_assoc()): ?>
+            <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px;">
+                <h2><?= htmlspecialchars($row['title']) ?></h2>
+                <p><strong>Description :</strong> <?= nl2br(htmlspecialchars($row['description'])) ?></p>
+                <p><strong>Date de début :</strong> <?= htmlspecialchars($row['start_date']) ?></p>
+                <p><strong>Date de fin :</strong> <?= htmlspecialchars($row['end_date']) ?></p>
 
-    if ($result->num_rows > 0) {
-        $matricule = $_SESSION['matricule'];
-        $sql = "SELECT name FROM users WHERE matricule = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $matricule);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
+                <?php
+                // Vérifier si l'élection est terminée
+                $current_date = date('Y-m-d');
+                if ($current_date > $row['end_date']): ?>
+                    <p style="color: red; font-weight: bold;">Élection terminée</p>
+                    <p>
+                        <a href="resultats_election.php?election_id=<?= $row['id'] ?>" style="background-color: #FFC107; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
+                            Consulter le résultat
+                        </a>
+                    </p>
+                <?php else: ?>
+                    <p>
+                        <a href="gestion_candidats.php?election_id=<?= $row['id'] ?>" style="background-color: #007BFF; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
+                            Gérer les candidats
+                        </a>
+                    </p>
+                    <p>
+                        <a href="gestion_election.php?election_id=<?= $row['id'] ?>" style="background-color: #28A745; color: #fff; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
+                            Gérer l'élection
+                        </a>
+                    </p>
+                <?php endif; ?>
+            </div>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <p>Aucune élection disponible pour le moment.</p>
+    <?php endif; ?>
 
-        echo "<p>Bonjour " . htmlspecialchars($user['name']) . "!<br>Vous pouvez gérer les candidats pour l'élection en cours suivante(s) :</p>";
-
-        $sql = "SELECT * FROM elections WHERE start_date <= NOW() AND end_date >= NOW()";
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                echo "<p>" . htmlspecialchars($row['title']) . "</p>";
-                echo '<form action="gestion_candidats.php" method="get" style="display:inline;">
-                        <input type="hidden" name="election_id" value="' . htmlspecialchars($row['id']) . '">
-                        <button type="submit">Voir les candidats</button>
-                      </form>';
-            }
-        } else {
-            echo "<p>Aucune élection en cours.</p>";
-        }
-    } else {
-        echo "<p>Aucune élection n'est en cours actuellement.<br>Vous recevrez une notification à l'ouverture du vote.<br>Restez connecté.</p>";
-    }
-} catch (Exception $e) {
-    echo "<p>Une erreur est survenue : " . htmlspecialchars($e->getMessage()) . "</p>";
-}
-?>
-
-<br><a href="log.php">Se déconnecter</a>
-</body>    
+    <p><a href="Admin_dashboard.php">⬅ Retour au tableau de bord</a></p>
+</body>
 </html>

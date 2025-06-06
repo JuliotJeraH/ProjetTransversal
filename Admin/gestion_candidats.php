@@ -3,8 +3,8 @@ session_start();
 include "DB_Connexion.php";
 
 // Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['matricule'])) {
-    header("Location: log.php");
+if (!isset($_SESSION['username'])) {
+    header("Location: Admin_log.php");
     exit();
 }
 
@@ -16,36 +16,37 @@ if (!isset($_GET['election_id'])) {
 
 $election_id = intval($_GET['election_id']);
 
-// Gérer la suppression d'un candidat
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['candidate_id'])) {
-    $candidate_id = intval($_POST['candidate_id']);
-    try {
-        $sql = "DELETE FROM candidates WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $candidate_id);
-        $stmt->execute();
+// Récupérer les informations de l'élection
+$sql = "SELECT title, end_date FROM elections WHERE id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $election_id);
+$stmt->execute();
+$election = $stmt->get_result()->fetch_assoc();
 
-        // Rediriger vers la même page après suppression
-        header("Location: gestion_candidats.php?election_id=" . $election_id);
-        exit();
-    } catch (Exception $e) {
-        echo "<p>Erreur lors de la suppression du candidat : " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
+if (!$election) {
+    echo "<p>Erreur : Élection introuvable.</p>";
+    exit();
 }
 
-// Gérer la mise à jour des visions
+$current_date = date('Y-m-d');
+$is_election_ended = $current_date > $election['end_date'];
+
+echo "<h1>Gestion des candidats pour l'élection : " . htmlspecialchars($election['title']) . "</h1>";
+
+if ($is_election_ended) {
+    echo "<p style='color: red; font-weight: bold;'>Cette élection est terminée.</p>";
+    echo "<a href='resultats_election.php?election_id=" . $election_id . "' style='background-color: #FFC107; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;'>Consulter le résultat</a>";
+    exit();
+}
+
+// Gérer la mise à jour des visions des candidats
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_all'])) {
     foreach ($_POST['visions'] as $candidate_id => $new_vision) {
-        try {
-            $sql = "UPDATE candidates SET vision = ? WHERE id = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("si", $new_vision, $candidate_id);
-            $stmt->execute();
-        } catch (Exception $e) {
-            echo "<p>Erreur lors de la mise à jour de la vision pour le candidat ID " . htmlspecialchars($candidate_id) . " : " . htmlspecialchars($e->getMessage()) . "</p>";
-        }
+        $sql = "UPDATE candidates SET vision = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("si", $new_vision, $candidate_id);
+        $stmt->execute();
     }
-
     // Rediriger vers la même page après mise à jour
     header("Location: gestion_candidats.php?election_id=" . $election_id);
     exit();
@@ -57,116 +58,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_candidate'])) {
     $vision = $_POST['vision'];
     $photo_path = null;
 
-    // Vérifier si une photo a été téléchargée
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-        $photo_tmp_name = $_FILES['photo']['tmp_name'];
-        $photo_name = basename($_FILES['photo']['name']);
-        $photo_path = "uploads/" . $photo_name;
-
-        // Déplacer le fichier téléchargé vers le dossier des uploads
-        if (!move_uploaded_file($photo_tmp_name, $photo_path)) {
-            echo "<p>Erreur lors du téléchargement de la photo.</p>";
-            $photo_path = null;
-        }
+        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+        $photo_path = "uploads/candidate_" . uniqid() . "." . $ext;
+        move_uploaded_file($_FILES['photo']['tmp_name'], $photo_path);
     }
 
-    // Ajouter le candidat dans la base de données
-    try {
-        $sql = "INSERT INTO candidates (name, photo, vision, election_id) VALUES (?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssi", $name, $photo_path, $vision, $election_id);
-        $stmt->execute();
-
-        // Rediriger vers la même page après ajout
-        header("Location: gestion_candidats.php?election_id=" . $election_id);
-        exit();
-    } catch (Exception $e) {
-        echo "<p>Erreur lors de l'ajout du candidat : " . htmlspecialchars($e->getMessage()) . "</p>";
-    }
+    $sql = "INSERT INTO candidates (name, photo, vision, election_id) VALUES (?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sssi", $name, $photo_path, $vision, $election_id);
+    $stmt->execute();
+    header("Location: gestion_candidats.php?election_id=" . $election_id);
+    exit();
 }
 
-try {
-    // Récupérer les informations de l'élection
-    $sql = "SELECT title FROM elections WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $election_id);
-    $stmt->execute();
-    $election = $stmt->get_result()->fetch_assoc();
+// Récupérer les candidats de l'élection
+$sql = "SELECT id, name, photo, vision FROM candidates WHERE election_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $election_id);
+$stmt->execute();
+$candidates = $stmt->get_result();
+?>
 
-    if (!$election) {
-        echo "<p>Erreur : Élection introuvable.</p>";
-        exit();
-    }
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des candidats</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; max-width: 900px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        img { max-width: 100px; max-height: 100px; object-fit: contain; }
+        textarea { width: 100%; }
+        input[type="text"] { width: 100%; }
+        .btn { padding: 6px 12px; margin: 2px; cursor: pointer; }
+        .btn-delete { background: #e74c3c; color: white; border: none; }
+        .btn-update { background: #3498db; color: white; border: none; }
+        .btn-add { background: #2ecc71; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>Gestion des candidats</h1>
 
-    echo "<h1>Gestion des candidats pour l'élection : " . htmlspecialchars($election['title']) . "</h1>";
-
-    // Récupérer les candidats de l'élection
-    $sql = "SELECT id, name, photo, vision FROM candidates WHERE election_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $election_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        echo "<form action='' method='post'>";
-        echo "<table border='1'>
+    <?php if ($candidates->num_rows > 0): ?>
+        <form action="" method="post">
+            <table border="1">
                 <tr>
                     <th>Nom</th>
                     <th>Photo</th>
                     <th>Vision</th>
                     <th>Actions</th>
-                </tr>";
-        while ($row = $result->fetch_assoc()) {
-            echo "<tr>
-                    <td>" . htmlspecialchars($row['name']) . "</td>
-                    <td>
-                        <form action='' method='post' enctype='multipart/form-data' style='display:inline;'>
-                            <input type='hidden' name='update_photo_candidate_id' value='" . htmlspecialchars($row['id']) . "'>";
-            if (!empty($row['photo']) && file_exists($row['photo'])) {
-                // Si une photo existe, afficher la photo
-                echo "<label style='cursor: pointer;'>
-                        <img src='" . htmlspecialchars($row['photo']) . "' alt='Photo' width='100'>
-                        <input type='file' name='new_photo' style='display:none;' onchange='this.form.submit();'>
-                      </label>";
-            } else {
-                // Si aucune photo n'existe, afficher un champ file avec un bouton "Parcourir"
-                echo "<input type='file' name='new_photo' onchange='this.form.submit();'>";
-            }
-            echo "      </form>
-                    </td>
-                    <td>
-                        <textarea name='visions[" . htmlspecialchars($row['id']) . "]' rows='3' cols='30'>" . htmlspecialchars($row['vision']) . "</textarea>
-                    </td>
-                    <td>
-                        <form action='' method='post' style='display:inline;'>
-                            <input type='hidden' name='candidate_id' value='" . htmlspecialchars($row['id']) . "'>
-                            <button type='submit' onclick='return confirm(\"Êtes-vous sûr de vouloir supprimer ce candidat ?\")'>Supprimer</button>
-                        </form>
-                    </td>
-                  </tr>";
-        }
-        echo "</table>";
-        echo "<button type='submit' name='update_all'>Valider</button>";
-        echo "</form>";
-    } else {
-        echo "<p>Aucun candidat trouvé pour cette élection.</p>";
-    }
+                </tr>
+                <?php while ($c = $candidates->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($c['name']) ?></td>
+                        <td>
+                            <?php if (!empty($c['photo']) && file_exists($c['photo'])): ?>
+                                <img src="<?= htmlspecialchars($c['photo']) ?>" alt="Photo" width="100">
+                            <?php else: ?>
+                                Aucune photo
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <textarea name="visions[<?= $c['id'] ?>]" rows="3" cols="30"><?= htmlspecialchars($c['vision']) ?></textarea>
+                        </td>
+                        <td>
+                            <form action="" method="post" style="display:inline;">
+                                <input type="hidden" name="delete_candidate_id" value="<?= $c['id'] ?>">
+                                <button type="submit" class="btn btn-delete" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce candidat ?')">Supprimer</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            </table>
+            <button type="submit" name="update_all" class="btn btn-update" style="margin-top: 10px;">Valider les modifications</button>
+        </form>
+    <?php else: ?>
+        <p>Aucun candidat trouvé pour cette élection.</p>
+    <?php endif; ?>
 
-    // Formulaire pour ajouter un nouveau candidat
-    echo '<h2>Ajouter un nouveau candidat</h2>
-          <form action="" method="post" enctype="multipart/form-data">
-              <input type="hidden" name="add_candidate" value="1">
-              <label for="name">Nom :</label>
-              <input type="text" name="name" id="name" required><br>
-              <label for="photo">Photo :</label>
-              <input type="file" name="photo" id="photo" accept="image/*" required><br>
-              <label for="vision">Vision :</label>
-              <textarea name="vision" id="vision" required></textarea><br>
-              <button type="submit">Ajouter</button>
-          </form>';
-} catch (Exception $e) {
-    echo "<p>Une erreur est survenue : " . htmlspecialchars($e->getMessage()) . "</p>";
-}
-?>
+    <h2>Ajouter un nouveau candidat</h2>
+    <form action="" method="post" enctype="multipart/form-data">
+        <label for="name">Nom :</label>
+        <input type="text" name="name" id="name" required><br>
+        <label for="photo">Photo :</label>
+        <input type="file" name="photo" id="photo" accept="image/*" required><br>
+        <label for="vision">Vision :</label>
+        <textarea name="vision" id="vision" required></textarea><br>
+        <button type="submit" name="add_candidate" class="btn btn-add">Ajouter</button>
+    </form>
 
-<br><a href="election_dispo.php">Retour aux élections</a>
+    <a href="election_dispo.php">Retour aux élections</a>
+</body>
+</html>
