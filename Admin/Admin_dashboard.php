@@ -21,7 +21,7 @@ if(!isset($_SESSION['username'])) {
     <ul>
         <li><a href="creation_election.php">Créer une élection</a></li>
         <li><a href="election_dispo.php">Elections disponible</a></li>
-        <li><a href="consult_stat.php">Consulter les statistique en temps réel</a></li>
+        <li><a href="avant_stat.php">Consulter les statistique en temps réel</a></li>
     </ul>
     <h3>
         <p><a href="Admin_log.php">Se déconnecter</a></p>

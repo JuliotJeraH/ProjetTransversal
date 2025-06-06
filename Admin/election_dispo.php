@@ -35,7 +35,7 @@ $result = $conn->query($sql);
                 if ($current_date > $row['end_date']): ?>
                     <p>Élection terminée</p>
                     <p>
-                        <a href="resultats_election.php?election_id=<?= $row['id'] ?>">Consulter le résultat</a>
+                        <a href="resultat.php?election_id=<?= $row['id'] ?>">Consulter le résultat</a>
                     </p>
                 <?php else: ?>
                     <p>
