@@ -17,7 +17,7 @@ if (!isset($_GET['election_id'])) {
 $election_id = intval($_GET['election_id']); // sécurité : forcer entier
 
 // Récupérer la liste des candidates pour cette élection
-$query = $conn->prepare("SELECT * FROM candidates WHERE election_id = ?");
+$query = $conn->prepare("SELECT id, name, vision, photo FROM candidates WHERE election_id = ?");
 $query->bind_param("i", $election_id);
 $query->execute();
 $result = $query->get_result();
@@ -49,6 +49,7 @@ $hasVoted = $hasVotedResult->fetch_assoc()['has_voted'];
         <table border="1">
             <thead>
                 <tr>
+                    <th>Photo</th>
                     <th>Nom</th>
                     <th>Vision</th>
                     <th>Action</th>
@@ -57,6 +58,13 @@ $hasVoted = $hasVotedResult->fetch_assoc()['has_voted'];
             <tbody>
                 <?php foreach ($candidates as $candidate): ?>
                     <tr>
+                        <td>
+                            <?php if (!empty($candidate['photo'])): ?>
+                                <img src="<?php echo htmlspecialchars($candidate['photo']); ?>" alt="Photo de <?php echo htmlspecialchars($candidate['name']); ?>" width="50" height="50">
+                            <?php else: ?>
+                                <span>Pas de photo</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?php echo htmlspecialchars($candidate['name']); ?></td>
                         <td><?php echo htmlspecialchars($candidate['vision']); ?></td>
                         <td>

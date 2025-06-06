@@ -1,3 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Création d'une élection</title>
+</head>
+<body>
+    <h1>Création d'une élection</h1>
+    <form method="POST" action="">
+        <label for="titre">Titre :</label>
+        <input type="text" name="titre" id="titre" required><br>
+
+        <label for="date_debut">Date de début :</label>
+        <input type="date" name="date_debut" id="date_debut" required><br>
+
+        <label for="date_fin">Date de fin :</label>
+        <input type="date" name="date_fin" id="date_fin" required><br>
+
+        <label for="description">Description :</label>
+        <textarea name="description" id="description" required></textarea><br>
+
+        <label for="candidates">Candidats (séparés par des virgules) :</label>
+        <input type="text" name="candidates" id="candidates" required><br>
+
+        <button type="submit">Créer l'élection</button>
+    </form>
+    <p><a href="Admin_dashboard.php">Retour</a></p>
+</body>
+</html>
+
 <?php 
 session_start();
 include "DB_Connexion.php";

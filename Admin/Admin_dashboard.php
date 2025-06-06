@@ -20,9 +20,7 @@ if(!isset($_SESSION['username'])) {
     <h1>Tableau de bord Administrateur</h1>
     <ul>
         <li><a href="creation_election.php">Créer une élection</a></li>
-        <li><a href="gestion_elections.php">Gérer l' élections</a></li>
-        <li><a href="gestion_candidats.php">Gérer les candidats</a></li>
-        <li><a href="gestion_votants.php">Gérer les votants</a></li>
+        <li><a href="election_dispo.php">Elections disponible</a></li>
         <li><a href="consult_stat.php">Consulter les statistique en temps réel</a></li>
     </ul>
     <h3>
