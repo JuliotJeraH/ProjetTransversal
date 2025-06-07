@@ -19,38 +19,48 @@ if (!isset($_SESSION['matricule'])) {
 
 <?php 
 try {
-    $sql = $conn->prepare("SELECT id, title FROM elections");
-    $sql->execute();
-    $result = $sql->get_result();
+    $matricule = $_SESSION['matricule'];
+
+    // Récupérer le nom de l'utilisateur
+    $sql = "SELECT name FROM users WHERE matricule = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $matricule);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+
+    echo "<p>Bonjour " . htmlspecialchars($user['name']) . "!<br>Voici les élections disponibles :</p>";
+
+    // Récupérer toutes les élections
+    $sql = "SELECT * FROM elections ORDER BY end_date DESC";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
-        $matricule = $_SESSION['matricule'];
-        $sql = "SELECT name FROM users WHERE matricule = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $matricule);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
+        while ($row = $result->fetch_assoc()) {
+            echo "<p><strong>" . htmlspecialchars($row['title']) . "</strong></p>";
+            echo "<p>Description : " . htmlspecialchars($row['description']) . "</p>";
+            echo "<p>Début : " . htmlspecialchars($row['start_date']) . " | Fin : " . htmlspecialchars($row['end_date']) . "</p>";
 
-        echo "<p>Bonjour " . htmlspecialchars($user['name']) . "!<br>Vous pouvez voter pour l'élection en cours suivante(s) :</p>";
-
-        $sql = "SELECT * FROM elections WHERE start_date <= NOW() AND end_date >= NOW()";
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                echo "<p>" . htmlspecialchars($row['title']) . "</p>";
+            // Vérifier si l'élection est terminée
+            $current_date = date('Y-m-d');
+            if ($current_date > $row['end_date']) {
+                echo "<p style='color: red;'>Élection terminée</p>";
+                echo '<form action="resultat.php" method="get" style="display:inline;">
+                        <input type="hidden" name="election_id" value="' . htmlspecialchars($row['id']) . '">
+                        <button type="submit">Voir le résultat</button>
+                      </form>';
+            } else {
+                echo "<p style='color: green;'>Élection en cours</p>";
                 echo '<form action="liste_candidats.php" method="get" style="display:inline;">
                         <input type="hidden" name="election_id" value="' . htmlspecialchars($row['id']) . '">
                         <button type="submit">Voir la liste et voter</button>
                       </form>';
             }
-        } else {
-            echo "<p>Aucune élection en cours.</p>";
+            echo "<hr>";
         }
     } else {
-        echo "<p>Aucune élection n'est en cours actuellement.<br>Vous recevrez une notification à l'ouverture du vote.<br>Restez connecté.</p>";
+        echo "<p>Aucune élection disponible pour le moment.</p>";
     }
 } catch (Exception $e) {
     echo "<p>Une erreur est survenue : " . htmlspecialchars($e->getMessage()) . "</p>";
