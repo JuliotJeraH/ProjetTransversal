@@ -44,7 +44,7 @@ try {
 
             // Vérifier si l'élection est terminée
             $current_date = date('Y-m-d');
-            if ($current_date > $row['end_date']) {
+            if ($current_date > $row['end_date'] || $row['start_date'] === $row['end_date']) {
                 echo "<p style='color: red;'>Élection terminée</p>";
                 echo '<form action="resultat.php" method="get" style="display:inline;">
                         <input type="hidden" name="election_id" value="' . htmlspecialchars($row['id']) . '">
